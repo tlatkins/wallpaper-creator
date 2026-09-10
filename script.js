@@ -418,9 +418,9 @@ const toneOptions = document.getElementById('toneOptions');
 const hueSpreadInput = document.getElementById('hueSpreadInput');
 const satSpreadInput = document.getElementById('satSpreadInput');
 const lightSpreadInput = document.getElementById('lightSpreadInput');
-const hueSpreadValue = document.getElementById('hueSpreadValue');
-const satSpreadValue = document.getElementById('satSpreadValue');
-const lightSpreadValue = document.getElementById('lightSpreadValue');
+const hueSpreadNumber = document.getElementById('hueSpreadNumber');
+const satSpreadNumber = document.getElementById('satSpreadNumber');
+const lightSpreadNumber = document.getElementById('lightSpreadNumber');
 const dial = document.getElementById('dial');
 const dialNeedle = document.getElementById('dialNeedle');
 const degreesInput = document.getElementById('degreesInput');
@@ -516,17 +516,25 @@ toneOptions.addEventListener('click', (e) => {
   scheduleRender();
 });
 
-/* Color variation sliders */
-function bindSpreadInput(input, valueEl, key) {
-  input.addEventListener('input', () => {
-    state[key] = Number(input.value) / 100;
-    valueEl.textContent = `${input.value}%`;
+/* Color variation sliders (each paired with an editable percent field) */
+function bindSpreadInput(rangeEl, numberEl, key) {
+  const apply = (value) => {
+    const clamped = clamp(Math.round(value), Number(rangeEl.min), Number(rangeEl.max));
+    state[key] = clamped / 100;
+    rangeEl.value = String(clamped);
+    numberEl.value = String(clamped);
     scheduleRender();
+  };
+  rangeEl.addEventListener('input', () => apply(Number(rangeEl.value)));
+  numberEl.addEventListener('input', () => {
+    if (numberEl.value === '') return;
+    apply(Number(numberEl.value));
   });
+  numberEl.addEventListener('blur', () => apply(Number(numberEl.value) || 0));
 }
-bindSpreadInput(hueSpreadInput, hueSpreadValue, 'hueSpread');
-bindSpreadInput(satSpreadInput, satSpreadValue, 'satSpread');
-bindSpreadInput(lightSpreadInput, lightSpreadValue, 'lightSpread');
+bindSpreadInput(hueSpreadInput, hueSpreadNumber, 'hueSpread');
+bindSpreadInput(satSpreadInput, satSpreadNumber, 'satSpread');
+bindSpreadInput(lightSpreadInput, lightSpreadNumber, 'lightSpread');
 
 /* Dial */
 function angleFromPointer(clientX, clientY) {
