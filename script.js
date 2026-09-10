@@ -301,29 +301,74 @@ function drawWavesStyle(ctx, w, h, palette, angle, rng) {
   });
 }
 
-function drawTextureStyle(ctx, w, h, palette, angle, rng) {
-  const tileSize = 384;
-  const noise = makeFractalNoiseSampler(rng);
-  const imageData = new ImageData(tileSize, tileSize);
+// Topographic-map style: quantizes a noise "elevation" field into flat
+// bands (like map hypsometric tinting) with a darker line traced along
+// each band boundary, so the shapes read as contour lines around organic
+// hills/basins rather than sine waves. Rendered pixel-for-pixel at the
+// target resolution (via an offscreen canvas) so contour edges stay
+// crisp at any wallpaper size and respect the requested rotation.
+function drawTopographicStyle(ctx, w, h, palette, angle, rng) {
+  const diag = Math.hypot(w, h);
+  const cx = w / 2, cy = h / 2;
+  const rad = (-angle * Math.PI) / 180;
+  const cos = Math.cos(rad), sin = Math.sin(rad);
+  const noise = makeFractalNoiseSampler(rng, [3, 6, 12, 24]);
+  const zoom = 0.9 + rng() * 0.7;
+
+  const bandCount = 6 + Math.floor(rng() * 5);
+  const bandColors = [];
+  for (let i = 0; i < bandCount; i++) {
+    const { r, g, b } = sampleGradientColor(palette, i / (bandCount - 1));
+    bandColors.push(r, g, b);
+  }
+
+  const off = document.createElement('canvas');
+  off.width = w; off.height = h;
+  const offCtx = off.getContext('2d');
+  const imageData = offCtx.createImageData(w, h);
   const data = imageData.data;
-  for (let y = 0; y < tileSize; y++) {
-    for (let x = 0; x < tileSize; x++) {
-      const n = noise(x / tileSize, y / tileSize);
-      const { r, g, b } = sampleGradientColor(palette, n);
-      const idx = (y * tileSize + x) * 4;
-      data[idx] = r; data[idx + 1] = g; data[idx + 2] = b; data[idx + 3] = 255;
+  const bandIndex = new Uint8Array(w * h);
+
+  for (let py = 0; py < h; py++) {
+    const dy = py - cy;
+    const rowOffset = py * w;
+    for (let px = 0; px < w; px++) {
+      const dx = px - cx;
+      const rx = dx * cos - dy * sin;
+      const ry = dx * sin + dy * cos;
+      const u = (rx / diag) * zoom + 0.5;
+      const v = (ry / diag) * zoom + 0.5;
+      const n = noise(u, v);
+      let band = Math.floor(n * bandCount);
+      if (band >= bandCount) band = bandCount - 1;
+      const i = rowOffset + px;
+      bandIndex[i] = band;
+      const ci = band * 3;
+      const idx = i * 4;
+      data[idx] = bandColors[ci];
+      data[idx + 1] = bandColors[ci + 1];
+      data[idx + 2] = bandColors[ci + 2];
+      data[idx + 3] = 255;
     }
   }
 
-  const tileCanvas = document.createElement('canvas');
-  tileCanvas.width = tileSize; tileCanvas.height = tileSize;
-  tileCanvas.getContext('2d').putImageData(imageData, 0, 0);
+  // Trace a contour line wherever adjacent pixels fall in different bands.
+  for (let py = 0; py < h; py++) {
+    const rowOffset = py * w;
+    for (let px = 0; px < w; px++) {
+      const i = rowOffset + px;
+      const band = bandIndex[i];
+      const right = px < w - 1 ? bandIndex[i + 1] : band;
+      const down = py < h - 1 ? bandIndex[i + w] : band;
+      if (right !== band || down !== band) {
+        const idx = i * 4;
+        data[idx] *= 0.5; data[idx + 1] *= 0.5; data[idx + 2] *= 0.5;
+      }
+    }
+  }
 
-  withRotation(ctx, w, h, angle, (diag) => {
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(tileCanvas, -diag / 2, -diag / 2, diag, diag);
-  });
+  offCtx.putImageData(imageData, 0, 0);
+  ctx.drawImage(off, 0, 0);
 }
 
 function drawMixedStyle(ctx, w, h, palette, angle, rng) {
@@ -332,7 +377,7 @@ function drawMixedStyle(ctx, w, h, palette, angle, rng) {
   ctx.save();
   ctx.globalAlpha = 0.35;
   ctx.globalCompositeOperation = 'overlay';
-  drawTextureStyle(ctx, w, h, palette, angle + 15, rng);
+  drawTopographicStyle(ctx, w, h, palette, angle + 15, rng);
   ctx.restore();
 
   ctx.save();
@@ -373,7 +418,7 @@ function renderWallpaper(ctx, w, h, s) {
   switch (s.style) {
     case 'gradient': drawGradientStyle(ctx, w, h, palette, s.angle, rng); break;
     case 'waves': drawWavesStyle(ctx, w, h, palette, s.angle, rng); break;
-    case 'texture': drawTextureStyle(ctx, w, h, palette, s.angle, rng); break;
+    case 'topographic': drawTopographicStyle(ctx, w, h, palette, s.angle, rng); break;
     case 'mixed': drawMixedStyle(ctx, w, h, palette, s.angle, rng); break;
     default: drawGradientStyle(ctx, w, h, palette, s.angle, rng);
   }

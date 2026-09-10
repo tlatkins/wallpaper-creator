@@ -1,7 +1,7 @@
 # Wallpaper Creator
 
 A static, client-side wallpaper generator. Pick a primary color and a
-pattern style, and it generates a unique gradient, wave, or texture
+pattern style, and it generates a unique gradient, wave, or topographic
 wallpaper you can download at full resolution for your phone, tablet,
 or desktop.
 
@@ -11,7 +11,8 @@ rendered to a `<canvas>`.
 ## Features
 
 - **Primary color** — enter a hex code or pick with the color swatch.
-- **Styles** — Gradient, Waves, Texture, or Mixed (all combined).
+- **Styles** — Gradient, Waves, Topographic (contour-map style bands), or
+  Mixed (all combined).
 - **Color scheme** — Random, Complementary, Monochromatic, Analogous,
   Triadic, or Tetradic, all derived from your primary color.
 - **Rotation** — drag the dial or type degrees (0–360) to rotate the
