@@ -17,6 +17,7 @@ const state = {
   hex: '#3B82F6',
   style: 'gradient',
   colorScheme: 'random',
+  tone: 'both',
   angle: 0,
   format: 'phone',
   seed: randomSeed(),
@@ -124,10 +125,27 @@ function pickWeighted(rng, items, weights) {
   return items[items.length - 1];
 }
 
+const LIGHTNESS_MIN = 8;
+const LIGHTNESS_MAX = 92;
+
+// Pick a lightness value, biased lighter/darker than the primary color's
+// own lightness (or spanning the full range for 'both').
+function pickLightness(rng, baseL, tone) {
+  if (tone === 'lighter') {
+    const lo = clamp(baseL + 4, LIGHTNESS_MIN, LIGHTNESS_MAX);
+    return lo + rng() * (LIGHTNESS_MAX - lo);
+  }
+  if (tone === 'darker') {
+    const hi = clamp(baseL - 4, LIGHTNESS_MIN, LIGHTNESS_MAX);
+    return LIGHTNESS_MIN + rng() * (hi - LIGHTNESS_MIN);
+  }
+  return LIGHTNESS_MIN + rng() * (LIGHTNESS_MAX - LIGHTNESS_MIN);
+}
+
 // Build a small family of colors derived from the primary hex using the
 // chosen color-harmony scheme, so accents stay complementary/triadic/etc.
 // rather than arbitrary nearby hues. schemeName 'random' picks one per call.
-function makePalette(hex, rng, count = 6, schemeName = 'random') {
+function makePalette(hex, rng, count = 6, schemeName = 'random', tone = 'both') {
   const base = hexToHsl(hex);
   const name = schemeName === 'random'
     ? COLOR_SCHEME_NAMES[Math.floor(rng() * COLOR_SCHEME_NAMES.length)]
@@ -139,7 +157,7 @@ function makePalette(hex, rng, count = 6, schemeName = 'random') {
     const jitter = (rng() * 2 - 1) * (name === 'monochromatic' ? 4 : 10);
     const h = base.h + anchor + jitter;
     const s = clamp(base.s * (0.6 + rng() * 0.5), 18, 100);
-    const l = clamp(12 + rng() * 76, 8, 92);
+    const l = pickLightness(rng, base.l, tone);
     colors.push(hslToHex(h, s, l));
   }
   colors[Math.floor(rng() * count)] = hex; // anchor the exact primary color
@@ -351,7 +369,7 @@ function drawMixedStyle(ctx, w, h, palette, angle, rng) {
 function renderWallpaper(ctx, w, h, s) {
   ctx.clearRect(0, 0, w, h);
   const rng = mulberry32(s.seed);
-  const palette = makePalette(s.hex, rng, 6, s.colorScheme);
+  const palette = makePalette(s.hex, rng, 6, s.colorScheme, s.tone);
   switch (s.style) {
     case 'gradient': drawGradientStyle(ctx, w, h, palette, s.angle, rng); break;
     case 'waves': drawWavesStyle(ctx, w, h, palette, s.angle, rng); break;
@@ -367,6 +385,7 @@ const colorPicker = document.getElementById('colorPicker');
 const hexInput = document.getElementById('hexInput');
 const styleOptions = document.getElementById('styleOptions');
 const schemeSelect = document.getElementById('schemeSelect');
+const toneOptions = document.getElementById('toneOptions');
 const dial = document.getElementById('dial');
 const dialNeedle = document.getElementById('dialNeedle');
 const degreesInput = document.getElementById('degreesInput');
@@ -449,6 +468,16 @@ styleOptions.addEventListener('click', (e) => {
 /* Color scheme */
 schemeSelect.addEventListener('change', () => {
   state.colorScheme = schemeSelect.value;
+  scheduleRender();
+});
+
+/* Tone */
+toneOptions.addEventListener('click', (e) => {
+  const btn = e.target.closest('.style-btn');
+  if (!btn) return;
+  toneOptions.querySelectorAll('.style-btn').forEach((b) => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.tone = btn.dataset.tone;
   scheduleRender();
 });
 
