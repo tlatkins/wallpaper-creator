@@ -3,24 +3,47 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Generate gradient, wave, and topographic wallpapers from a single color, then download them at full resolution for phone, tablet, or desktop." />
+  <meta name="theme-color" content="#141210" />
   <title>Wallpaper Creator</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23f08a52'/%3E%3Cstop offset='1' stop-color='%23c94f2e'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="app">
     <header class="app-header">
+      <p class="eyebrow">Color to canvas</p>
       <h1>Wallpaper Creator</h1>
       <p>Generate gradient, wave, and topographic wallpapers &mdash; then download them at full resolution.</p>
     </header>
 
     <main class="layout">
       <section class="controls" aria-label="Controls">
+       <div class="controls-panel">
 
-        <div class="control-group">
-          <label for="hexInput">Primary color</label>
-          <div class="color-row">
-            <input type="color" id="colorPicker" value="#3b82f6" aria-label="Pick primary color" />
-            <input type="text" id="hexInput" value="#3B82F6" maxlength="7" spellcheck="false" aria-label="Primary color hex code" />
+        <div class="control-row">
+          <div class="control-group">
+            <label for="hexInput">Primary color</label>
+            <div class="color-row">
+              <input type="color" id="colorPicker" value="#E07A3F" aria-label="Pick primary color" />
+              <input type="text" id="hexInput" value="#E07A3F" maxlength="7" spellcheck="false" aria-label="Primary color hex code" aria-describedby="hexError" />
+            </div>
+            <p class="field-error" id="hexError" hidden>Enter a valid hex, like #E07A3F.</p>
+          </div>
+
+          <div class="control-group">
+            <label for="schemeSelect">Color scheme</label>
+            <select id="schemeSelect">
+              <option value="random">Random</option>
+              <option value="complementary">Complementary</option>
+              <option value="monochromatic">Monochromatic</option>
+              <option value="analogous">Analogous</option>
+              <option value="triadic">Triadic</option>
+              <option value="tetradic">Tetradic</option>
+            </select>
           </div>
         </div>
 
@@ -31,18 +54,6 @@
             <button type="button" class="style-btn" data-style="waves">Waves</button>
             <button type="button" class="style-btn" data-style="topographic">Topographic</button>
           </div>
-        </div>
-
-        <div class="control-group">
-          <label for="schemeSelect">Color scheme</label>
-          <select id="schemeSelect">
-            <option value="random">Random</option>
-            <option value="complementary">Complementary</option>
-            <option value="monochromatic">Monochromatic</option>
-            <option value="analogous">Analogous</option>
-            <option value="triadic">Triadic</option>
-            <option value="tetradic">Tetradic</option>
-          </select>
         </div>
 
         <div class="control-group">
@@ -83,7 +94,7 @@
           <label for="degreesInput">Rotation</label>
           <div class="dial-row">
             <div class="dial" id="dial" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="360" aria-valuenow="0" aria-label="Rotation in degrees">
-              <svg viewBox="0 0 120 120" width="100" height="100">
+              <svg viewBox="0 0 120 120" width="80" height="80">
                 <circle class="dial-track" cx="60" cy="60" r="52" />
                 <line class="dial-needle" id="dialNeedle" x1="60" y1="60" x2="60" y2="14" />
                 <circle class="dial-hub" cx="60" cy="60" r="5" />
@@ -107,9 +118,26 @@
         </div>
 
         <div class="control-group buttons-row">
-          <button type="button" id="randomizeBtn" class="btn btn-secondary">🎲 Randomize</button>
-          <button type="button" id="downloadBtn" class="btn btn-primary">⬇ Download</button>
+          <button type="button" id="randomizeBtn" class="btn btn-secondary">
+            <svg class="btn-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <rect x="3" y="3" width="14" height="14" rx="3.5" stroke="currentColor" stroke-width="1.6" />
+              <circle cx="7" cy="7" r="1.15" fill="currentColor" />
+              <circle cx="13" cy="7" r="1.15" fill="currentColor" />
+              <circle cx="10" cy="10" r="1.15" fill="currentColor" />
+              <circle cx="7" cy="13" r="1.15" fill="currentColor" />
+              <circle cx="13" cy="13" r="1.15" fill="currentColor" />
+            </svg>
+            Randomize
+          </button>
+          <button type="button" id="downloadBtn" class="btn btn-primary">
+            <svg class="btn-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M10 3v9.5M10 12.5l-3.5-3.5M10 12.5l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M4 14.5v1.25A1.25 1.25 0 0 0 5.25 17h9.5A1.25 1.25 0 0 0 16 15.75V14.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            </svg>
+            Download
+          </button>
         </div>
+       </div>
 
         <p class="seed-readout">Seed: <span id="seedValue">&mdash;</span></p>
       </section>

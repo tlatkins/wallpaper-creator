@@ -14,7 +14,7 @@ const PREVIEW_MAX = 820;
 /* ------------------------------ State ------------------------------- */
 
 const state = {
-  hex: '#3B82F6',
+  hex: '#E07A3F',
   style: 'gradient',
   colorScheme: 'random',
   tone: 'both',
@@ -106,6 +106,24 @@ function hslToHex(h, s, l) {
 
 function isValidHex(hex) { return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex); }
 
+// Shortest angular path between two hues, so a hue interpolation never
+// swings the long way around the color wheel.
+function lerpHue(h1, h2, t) {
+  const diff = ((h2 - h1 + 540) % 360) - 180;
+  return (h1 + diff * t + 360) % 360;
+}
+
+// Interpolating two colors through RGB (canvas gradients do this natively)
+// dips through a muddy, often darker mid-tone whenever the colors are far
+// apart in hue — that dip is what reads as a hard seam in a "smooth"
+// gradient. Interpolating through HSL instead keeps saturation/lightness
+// moving evenly and just rotates hue, so the color stays vivid throughout.
+function lerpColorHsl(hexA, hexB, t) {
+  const a = hexToHsl(hexA);
+  const b = hexToHsl(hexB);
+  return hslToHex(lerpHue(a.h, b.h, t), lerp(a.s, b.s, t), lerp(a.l, b.l, t));
+}
+
 // Color-harmony schemes, expressed as hue offsets from the primary color
 // plus how often each offset should be used (the primary hue dominates,
 // the others act as accents).
@@ -183,13 +201,34 @@ function sampleGradientColor(stops, t) {
   const pos = t * (n - 1);
   const i = clamp(Math.floor(pos), 0, n - 2);
   const localT = pos - i;
-  const a = hexToRgb(stops[i]);
-  const b = hexToRgb(stops[i + 1]);
-  return {
-    r: lerp(a.r, b.r, localT),
-    g: lerp(a.g, b.g, localT),
-    b: lerp(a.b, b.b, localT),
-  };
+  return hexToRgb(lerpColorHsl(stops[i], stops[i + 1], localT));
+}
+
+// Stop positions spread roughly evenly across 0..1 with bounded jitter, so
+// two color stops never land close enough together to read as a hard seam.
+function makeSpreadPositions(rng, count) {
+  const slot = 1 / (count - 1);
+  const positions = Array.from({ length: count }, (_, i) => {
+    const jitter = (rng() * 2 - 1) * slot * 0.35;
+    return clamp(i * slot + jitter, 0, 1);
+  });
+  positions[0] = 0;
+  positions[count - 1] = 1;
+  return positions.sort((a, b) => a - b);
+}
+
+// Fills in a canvas gradient's color stops, inserting several HSL-interpolated
+// sub-stops per segment instead of one native RGB-interpolated stop per
+// color, so the transition stays smooth and vivid across the whole span.
+function addSmoothColorStops(grad, positions, colors, stepsPerSegment = 10) {
+  for (let i = 0; i < positions.length - 1; i++) {
+    const p0 = positions[i], p1 = positions[i + 1];
+    const c0 = colors[i], c1 = colors[i + 1];
+    for (let s = i === 0 ? 0 : 1; s <= stepsPerSegment; s++) {
+      const t = s / stepsPerSegment;
+      grad.addColorStop(clamp(lerp(p0, p1, t), 0, 1), lerpColorHsl(c0, c1, t));
+    }
+  }
 }
 
 /* ----------------------------- Value noise ---------------------------- */
@@ -261,11 +300,9 @@ function drawGradientStyle(ctx, w, h, palette, angle, rng) {
     const half = diag / 2;
     const grad = ctx.createLinearGradient(-half, -half, half, half);
     const stopCount = 4 + Math.floor(rng() * 3);
-    const positions = [0, ...Array.from({ length: stopCount - 2 }, () => rng()), 1].sort((a, b) => a - b);
-    positions.forEach((p, i) => {
-      const color = palette[i % palette.length];
-      grad.addColorStop(p, color);
-    });
+    const positions = makeSpreadPositions(rng, stopCount);
+    const colors = positions.map((_, i) => palette[i % palette.length]);
+    addSmoothColorStops(grad, positions, colors);
     ctx.fillStyle = grad;
     ctx.fillRect(-half, -half, diag, diag);
 
@@ -428,6 +465,7 @@ const formatSelect = document.getElementById('formatSelect');
 const randomizeBtn = document.getElementById('randomizeBtn');
 const downloadBtn = document.getElementById('downloadBtn');
 const seedValue = document.getElementById('seedValue');
+const hexError = document.getElementById('hexError');
 const previewCanvas = document.getElementById('previewCanvas');
 const previewCaption = document.getElementById('previewCaption');
 const renderCanvas = document.getElementById('renderCanvas');
@@ -481,7 +519,11 @@ hexInput.addEventListener('input', () => {
   let v = hexInput.value.trim();
   if (v && v[0] !== '#') v = '#' + v;
   hexInput.value = v;
-  if (isValidHex(v)) {
+  const valid = isValidHex(v);
+  const showError = v.length > 1 && !valid;
+  hexInput.classList.toggle('invalid', showError);
+  hexError.hidden = !showError;
+  if (valid) {
     state.hex = v;
     colorPicker.value = v.length === 4
       ? '#' + [...v.slice(1)].map((c) => c + c).join('')
