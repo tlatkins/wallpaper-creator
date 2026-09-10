@@ -204,17 +204,45 @@ function sampleGradientColor(stops, t) {
   return hexToRgb(lerpColorHsl(stops[i], stops[i + 1], localT));
 }
 
-// Stop positions spread roughly evenly across 0..1 with bounded jitter, so
-// two color stops never land close enough together to read as a hard seam.
+// Stop positions spread evenly across 0..1 with light jitter, so two color
+// stops never land close enough together to read as a hard, fast transition.
 function makeSpreadPositions(rng, count) {
   const slot = 1 / (count - 1);
   const positions = Array.from({ length: count }, (_, i) => {
-    const jitter = (rng() * 2 - 1) * slot * 0.35;
+    const jitter = (rng() * 2 - 1) * slot * 0.15;
     return clamp(i * slot + jitter, 0, 1);
   });
   positions[0] = 0;
   positions[count - 1] = 1;
   return positions.sort((a, b) => a - b);
+}
+
+// Picks `count` distinct colors from a palette without replacement.
+function sampleDistinct(rng, arr, count) {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy.slice(0, count);
+}
+
+// Orders a set of colors into the sequence with the smallest total hue
+// travel, by sorting hues around the color wheel and "cutting" the circle
+// at its single largest gap. Left to right (or start to end), consecutive
+// colors are then always hue-adjacent, so a gradient built from this order
+// sweeps steadily through color instead of jumping between unrelated hues.
+function orderColorsForSmoothSweep(colors) {
+  const withHue = colors.map((hex) => ({ hex, h: hexToHsl(hex).h }));
+  withHue.sort((a, b) => a.h - b.h);
+  let maxGap = -1;
+  let cutIndex = 0;
+  for (let i = 0; i < withHue.length; i++) {
+    const next = withHue[(i + 1) % withHue.length].h;
+    const gap = ((next - withHue[i].h + 360) % 360) || 360;
+    if (gap > maxGap) { maxGap = gap; cutIndex = (i + 1) % withHue.length; }
+  }
+  return [...withHue.slice(cutIndex), ...withHue.slice(0, cutIndex)].map((c) => c.hex);
 }
 
 // Fills in a canvas gradient's color stops, inserting several HSL-interpolated
@@ -301,7 +329,7 @@ function drawGradientStyle(ctx, w, h, palette, angle, rng) {
     const grad = ctx.createLinearGradient(-half, -half, half, half);
     const stopCount = 4 + Math.floor(rng() * 3);
     const positions = makeSpreadPositions(rng, stopCount);
-    const colors = positions.map((_, i) => palette[i % palette.length]);
+    const colors = orderColorsForSmoothSweep(sampleDistinct(rng, palette, stopCount));
     addSmoothColorStops(grad, positions, colors);
     ctx.fillStyle = grad;
     ctx.fillRect(-half, -half, diag, diag);
