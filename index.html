@@ -55,6 +55,25 @@
         </div>
 
         <div class="control-group">
+          <label>Color variation</label>
+          <div class="variation-row">
+            <span class="variation-label">Hue</span>
+            <input type="range" id="hueSpreadInput" min="0" max="150" value="100" aria-label="Hue variation" />
+            <span class="variation-value" id="hueSpreadValue">100%</span>
+          </div>
+          <div class="variation-row">
+            <span class="variation-label">Saturation</span>
+            <input type="range" id="satSpreadInput" min="0" max="150" value="100" aria-label="Saturation variation" />
+            <span class="variation-value" id="satSpreadValue">100%</span>
+          </div>
+          <div class="variation-row">
+            <span class="variation-label">Lightness</span>
+            <input type="range" id="lightSpreadInput" min="0" max="150" value="100" aria-label="Lightness variation" />
+            <span class="variation-value" id="lightSpreadValue">100%</span>
+          </div>
+        </div>
+
+        <div class="control-group">
           <label for="degreesInput">Rotation</label>
           <div class="dial-row">
             <div class="dial" id="dial" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="360" aria-valuenow="0" aria-label="Rotation in degrees">

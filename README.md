@@ -14,6 +14,12 @@ rendered to a `<canvas>`.
 - **Styles** — Gradient, Waves, or Topographic (contour-map style bands).
 - **Color scheme** — Random, Complementary, Monochromatic, Analogous,
   Triadic, or Tetradic, all derived from your primary color.
+- **Tone** — bias the palette Darker, Lighter, or Both relative to the
+  primary color.
+- **Color variation** — three sliders (Hue, Saturation, Lightness) that
+  control how far the generated colors are allowed to stray from the
+  primary in each dimension, from 0% (identical to the primary) up to
+  150% (exaggerated spread).
 - **Rotation** — drag the dial or type degrees (0–360) to rotate the
   pattern.
 - **Randomize** — reseed for a new variation while keeping your color,

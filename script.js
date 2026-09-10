@@ -18,6 +18,9 @@ const state = {
   style: 'gradient',
   colorScheme: 'random',
   tone: 'both',
+  hueSpread: 1,
+  satSpread: 1,
+  lightSpread: 1,
   angle: 0,
   format: 'phone',
   seed: randomSeed(),
@@ -125,27 +128,35 @@ function pickWeighted(rng, items, weights) {
   return items[items.length - 1];
 }
 
-const LIGHTNESS_MIN = 8;
-const LIGHTNESS_MAX = 92;
+const LIGHTNESS_MIN = 4;
+const LIGHTNESS_MAX = 96;
 
 // Pick a lightness value, biased lighter/darker than the primary color's
-// own lightness (or spanning the full range for 'both').
-function pickLightness(rng, baseL, tone) {
-  if (tone === 'lighter') {
-    const lo = clamp(baseL + 4, LIGHTNESS_MIN, LIGHTNESS_MAX);
-    return lo + rng() * (LIGHTNESS_MAX - lo);
-  }
-  if (tone === 'darker') {
-    const hi = clamp(baseL - 4, LIGHTNESS_MIN, LIGHTNESS_MAX);
-    return LIGHTNESS_MIN + rng() * (hi - LIGHTNESS_MIN);
-  }
-  return LIGHTNESS_MIN + rng() * (LIGHTNESS_MAX - LIGHTNESS_MIN);
+// own lightness (or spanning both directions for 'both'). `spread` (0..~1.5)
+// scales how far the result is allowed to stray from the primary's own
+// lightness — 0 always returns baseL exactly, 1 matches the original range.
+function pickLightness(rng, baseL, tone, spread) {
+  const maxDelta = 46 * spread;
+  let delta;
+  if (tone === 'lighter') delta = rng() * maxDelta;
+  else if (tone === 'darker') delta = -rng() * maxDelta;
+  else delta = (rng() * 2 - 1) * maxDelta;
+  return clamp(baseL + delta, LIGHTNESS_MIN, LIGHTNESS_MAX);
 }
 
 // Build a small family of colors derived from the primary hex using the
 // chosen color-harmony scheme, so accents stay complementary/triadic/etc.
 // rather than arbitrary nearby hues. schemeName 'random' picks one per call.
-function makePalette(hex, rng, count = 6, schemeName = 'random', tone = 'both') {
+// hueSpread/satSpread/lightSpread (0..~1.5) scale how far each channel is
+// allowed to deviate from the primary color — 0 collapses that channel to
+// match the primary exactly, 1 is the normal amount of variation.
+function makePalette(hex, rng, count = 6, {
+  scheme: schemeName = 'random',
+  tone = 'both',
+  hueSpread = 1,
+  satSpread = 1,
+  lightSpread = 1,
+} = {}) {
   const base = hexToHsl(hex);
   const name = schemeName === 'random'
     ? COLOR_SCHEME_NAMES[Math.floor(rng() * COLOR_SCHEME_NAMES.length)]
@@ -153,11 +164,13 @@ function makePalette(hex, rng, count = 6, schemeName = 'random', tone = 'both') 
   const scheme = COLOR_SCHEMES[name] || COLOR_SCHEMES.complementary;
   const colors = [];
   for (let i = 0; i < count; i++) {
-    const anchor = pickWeighted(rng, scheme.anchors, scheme.weights);
-    const jitter = (rng() * 2 - 1) * (name === 'monochromatic' ? 4 : 10);
+    const anchor = pickWeighted(rng, scheme.anchors, scheme.weights) * hueSpread;
+    const jitterMax = (name === 'monochromatic' ? 4 : 10) * hueSpread;
+    const jitter = (rng() * 2 - 1) * jitterMax;
     const h = base.h + anchor + jitter;
-    const s = clamp(base.s * (0.6 + rng() * 0.5), 18, 100);
-    const l = pickLightness(rng, base.l, tone);
+    const satMultiplier = 1 + (rng() * 2 - 1) * 0.4 * satSpread;
+    const s = clamp(base.s * satMultiplier, 8, 100);
+    const l = pickLightness(rng, base.l, tone, lightSpread);
     colors.push(hslToHex(h, s, l));
   }
   colors[Math.floor(rng() * count)] = hex; // anchor the exact primary color
@@ -380,7 +393,13 @@ function drawTopographicStyle(ctx, w, h, palette, angle, rng) {
 function renderWallpaper(ctx, w, h, s) {
   ctx.clearRect(0, 0, w, h);
   const rng = mulberry32(s.seed);
-  const palette = makePalette(s.hex, rng, 6, s.colorScheme, s.tone);
+  const palette = makePalette(s.hex, rng, 6, {
+    scheme: s.colorScheme,
+    tone: s.tone,
+    hueSpread: s.hueSpread,
+    satSpread: s.satSpread,
+    lightSpread: s.lightSpread,
+  });
   switch (s.style) {
     case 'gradient': drawGradientStyle(ctx, w, h, palette, s.angle, rng); break;
     case 'waves': drawWavesStyle(ctx, w, h, palette, s.angle, rng); break;
@@ -396,6 +415,12 @@ const hexInput = document.getElementById('hexInput');
 const styleOptions = document.getElementById('styleOptions');
 const schemeSelect = document.getElementById('schemeSelect');
 const toneOptions = document.getElementById('toneOptions');
+const hueSpreadInput = document.getElementById('hueSpreadInput');
+const satSpreadInput = document.getElementById('satSpreadInput');
+const lightSpreadInput = document.getElementById('lightSpreadInput');
+const hueSpreadValue = document.getElementById('hueSpreadValue');
+const satSpreadValue = document.getElementById('satSpreadValue');
+const lightSpreadValue = document.getElementById('lightSpreadValue');
 const dial = document.getElementById('dial');
 const dialNeedle = document.getElementById('dialNeedle');
 const degreesInput = document.getElementById('degreesInput');
@@ -490,6 +515,18 @@ toneOptions.addEventListener('click', (e) => {
   state.tone = btn.dataset.tone;
   scheduleRender();
 });
+
+/* Color variation sliders */
+function bindSpreadInput(input, valueEl, key) {
+  input.addEventListener('input', () => {
+    state[key] = Number(input.value) / 100;
+    valueEl.textContent = `${input.value}%`;
+    scheduleRender();
+  });
+}
+bindSpreadInput(hueSpreadInput, hueSpreadValue, 'hueSpread');
+bindSpreadInput(satSpreadInput, satSpreadValue, 'satSpread');
+bindSpreadInput(lightSpreadInput, lightSpreadValue, 'lightSpread');
 
 /* Dial */
 function angleFromPointer(clientX, clientY) {
