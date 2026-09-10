@@ -193,9 +193,15 @@ function sampleGrid(grid, size, x, y) {
   return grid[gy * size + gx];
 }
 
+// Perlin's quintic fade curve. Easing the interpolation factor (instead of
+// lerping it raw) makes the field bend smoothly through each grid cell
+// rather than kinking at cell boundaries — this is what keeps contour
+// lines curvy instead of pointy.
+function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+
 function bilinear(grid, size, fx, fy) {
   const x0 = Math.floor(fx), y0 = Math.floor(fy);
-  const tx = fx - x0, ty = fy - y0;
+  const tx = fade(fx - x0), ty = fade(fy - y0);
   const v00 = sampleGrid(grid, size, x0, y0);
   const v10 = sampleGrid(grid, size, x0 + 1, y0);
   const v01 = sampleGrid(grid, size, x0, y0 + 1);
