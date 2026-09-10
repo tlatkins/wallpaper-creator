@@ -307,12 +307,14 @@ function drawWavesStyle(ctx, w, h, palette, angle, rng) {
 // hills/basins rather than sine waves. Rendered pixel-for-pixel at the
 // target resolution (via an offscreen canvas) so contour edges stay
 // crisp at any wallpaper size and respect the requested rotation.
+function smoothstep(t) { return t * t * (3 - 2 * t); }
+
 function drawTopographicStyle(ctx, w, h, palette, angle, rng) {
   const diag = Math.hypot(w, h);
   const cx = w / 2, cy = h / 2;
   const rad = (-angle * Math.PI) / 180;
   const cos = Math.cos(rad), sin = Math.sin(rad);
-  const noise = makeFractalNoiseSampler(rng, [3, 6, 12, 24]);
+  const noise = makeFractalNoiseSampler(rng, [3, 6, 12]);
   const zoom = 0.9 + rng() * 0.7;
 
   const bandCount = 6 + Math.floor(rng() * 5);
@@ -322,12 +324,17 @@ function drawTopographicStyle(ctx, w, h, palette, angle, rng) {
     bandColors.push(r, g, b);
   }
 
+  // Half-width of the contour line, in fractional "band units" — the line
+  // fades in smoothly as the elevation value nears a band boundary instead
+  // of being decided pixel-by-pixel, which is what removes the jagged
+  // staircase look.
+  const lineHalfWidth = 0.05;
+
   const off = document.createElement('canvas');
   off.width = w; off.height = h;
   const offCtx = off.getContext('2d');
   const imageData = offCtx.createImageData(w, h);
   const data = imageData.data;
-  const bandIndex = new Uint8Array(w * h);
 
   for (let py = 0; py < h; py++) {
     const dy = py - cy;
@@ -339,31 +346,24 @@ function drawTopographicStyle(ctx, w, h, palette, angle, rng) {
       const u = (rx / diag) * zoom + 0.5;
       const v = (ry / diag) * zoom + 0.5;
       const n = noise(u, v);
-      let band = Math.floor(n * bandCount);
+      const bv = n * bandCount;
+      let band = Math.floor(bv);
       if (band >= bandCount) band = bandCount - 1;
-      const i = rowOffset + px;
-      bandIndex[i] = band;
-      const ci = band * 3;
-      const idx = i * 4;
-      data[idx] = bandColors[ci];
-      data[idx + 1] = bandColors[ci + 1];
-      data[idx + 2] = bandColors[ci + 2];
-      data[idx + 3] = 255;
-    }
-  }
+      if (band < 0) band = 0;
 
-  // Trace a contour line wherever adjacent pixels fall in different bands.
-  for (let py = 0; py < h; py++) {
-    const rowOffset = py * w;
-    for (let px = 0; px < w; px++) {
-      const i = rowOffset + px;
-      const band = bandIndex[i];
-      const right = px < w - 1 ? bandIndex[i + 1] : band;
-      const down = py < h - 1 ? bandIndex[i + w] : band;
-      if (right !== band || down !== band) {
-        const idx = i * 4;
-        data[idx] *= 0.5; data[idx + 1] *= 0.5; data[idx + 2] *= 0.5;
+      const frac = bv - Math.floor(bv);
+      const distToBoundary = Math.min(frac, 1 - frac);
+      let shade = 1;
+      if (distToBoundary < lineHalfWidth) {
+        shade = 1 - 0.55 * (1 - smoothstep(distToBoundary / lineHalfWidth));
       }
+
+      const ci = band * 3;
+      const idx = (rowOffset + px) * 4;
+      data[idx] = bandColors[ci] * shade;
+      data[idx + 1] = bandColors[ci + 1] * shade;
+      data[idx + 2] = bandColors[ci + 2] * shade;
+      data[idx + 3] = 255;
     }
   }
 
