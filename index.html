@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wallpaper Creator</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <h1>Wallpaper Creator</h1>
+      <p>Generate gradient, wave, and texture wallpapers &mdash; then download them at full resolution.</p>
+    </header>
+
+    <main class="layout">
+      <section class="controls" aria-label="Controls">
+
+        <div class="control-group">
+          <label for="hexInput">Primary color</label>
+          <div class="color-row">
+            <input type="color" id="colorPicker" value="#3b82f6" aria-label="Pick primary color" />
+            <input type="text" id="hexInput" value="#3B82F6" maxlength="7" spellcheck="false" aria-label="Primary color hex code" />
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label>Style</label>
+          <div class="style-options" id="styleOptions" role="radiogroup" aria-label="Pattern style">
+            <button type="button" class="style-btn active" data-style="gradient">Gradient</button>
+            <button type="button" class="style-btn" data-style="waves">Waves</button>
+            <button type="button" class="style-btn" data-style="texture">Texture</button>
+            <button type="button" class="style-btn" data-style="mixed">Mixed</button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label for="schemeSelect">Color scheme</label>
+          <select id="schemeSelect">
+            <option value="random">Random</option>
+            <option value="complementary">Complementary</option>
+            <option value="monochromatic">Monochromatic</option>
+            <option value="analogous">Analogous</option>
+            <option value="triadic">Triadic</option>
+            <option value="tetradic">Tetradic</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="degreesInput">Rotation</label>
+          <div class="dial-row">
+            <div class="dial" id="dial" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="360" aria-valuenow="0" aria-label="Rotation in degrees">
+              <svg viewBox="0 0 120 120" width="100" height="100">
+                <circle class="dial-track" cx="60" cy="60" r="52" />
+                <line class="dial-needle" id="dialNeedle" x1="60" y1="60" x2="60" y2="14" />
+                <circle class="dial-hub" cx="60" cy="60" r="5" />
+              </svg>
+            </div>
+            <div class="degrees-field">
+              <input type="number" id="degreesInput" min="0" max="360" value="0" />
+              <span>&deg;</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label for="formatSelect">Wallpaper size</label>
+          <select id="formatSelect">
+            <option value="phone">Phone &mdash; 1290 &times; 2796 (iPhone)</option>
+            <option value="tablet">Tablet &mdash; 2732 &times; 2048 (iPad)</option>
+            <option value="desktop">Desktop &mdash; 5120 &times; 2880 (Mac)</option>
+            <option value="square">Square &mdash; 2732 &times; 2732</option>
+          </select>
+        </div>
+
+        <div class="control-group buttons-row">
+          <button type="button" id="randomizeBtn" class="btn btn-secondary">🎲 Randomize</button>
+          <button type="button" id="downloadBtn" class="btn btn-primary">⬇ Download</button>
+        </div>
+
+        <p class="seed-readout">Seed: <span id="seedValue">&mdash;</span></p>
+      </section>
+
+      <section class="preview-area" aria-label="Preview">
+        <div class="preview-frame" id="previewFrame">
+          <canvas id="previewCanvas"></canvas>
+        </div>
+        <p class="preview-caption" id="previewCaption"></p>
+      </section>
+    </main>
+  </div>
+
+  <canvas id="renderCanvas" style="display:none;"></canvas>
+
+  <script src="script.js"></script>
+</body>
+</html>
