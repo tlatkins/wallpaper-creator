@@ -11,8 +11,7 @@ rendered to a `<canvas>`.
 ## Features
 
 - **Primary color** — enter a hex code or pick with the color swatch.
-- **Styles** — Gradient, Waves, Topographic (contour-map style bands), or
-  Mixed (all combined).
+- **Styles** — Gradient, Waves, or Topographic (contour-map style bands).
 - **Color scheme** — Random, Complementary, Monochromatic, Analogous,
   Triadic, or Tetradic, all derived from your primary color.
 - **Rotation** — drag the dial or type degrees (0–360) to rotate the

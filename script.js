@@ -377,46 +377,6 @@ function drawTopographicStyle(ctx, w, h, palette, angle, rng) {
   ctx.drawImage(off, 0, 0);
 }
 
-function drawMixedStyle(ctx, w, h, palette, angle, rng) {
-  drawGradientStyle(ctx, w, h, palette, angle, rng);
-
-  ctx.save();
-  ctx.globalAlpha = 0.35;
-  ctx.globalCompositeOperation = 'overlay';
-  drawTopographicStyle(ctx, w, h, palette, angle + 15, rng);
-  ctx.restore();
-
-  ctx.save();
-  ctx.globalAlpha = 0.55;
-  withRotation(ctx, w, h, angle, (diag) => {
-    const half = diag / 2;
-    const layers = 3 + Math.floor(rng() * 3);
-    const steps = 80;
-    for (let i = 0; i < layers; i++) {
-      const t = i / (layers - 1);
-      const baseline = lerp(-half * 0.3, half * 0.95, t) + (rng() * 2 - 1) * diag * 0.03;
-      const amplitude = diag * (0.02 + rng() * 0.05);
-      const frequency = (0.8 + rng() * 2) / diag;
-      const phase = rng() * Math.PI * 2;
-      const color = palette[(i + 2) % palette.length];
-
-      ctx.beginPath();
-      ctx.moveTo(-half, baseline);
-      for (let s = 0; s <= steps; s++) {
-        const x = lerp(-half, half, s / steps);
-        const y = baseline + Math.sin(x * frequency * Math.PI * 2 + phase) * amplitude;
-        ctx.lineTo(x, y);
-      }
-      ctx.lineTo(half, half);
-      ctx.lineTo(-half, half);
-      ctx.closePath();
-      ctx.fillStyle = hexToRgba(color, 0.3);
-      ctx.fill();
-    }
-  });
-  ctx.restore();
-}
-
 function renderWallpaper(ctx, w, h, s) {
   ctx.clearRect(0, 0, w, h);
   const rng = mulberry32(s.seed);
@@ -425,7 +385,6 @@ function renderWallpaper(ctx, w, h, s) {
     case 'gradient': drawGradientStyle(ctx, w, h, palette, s.angle, rng); break;
     case 'waves': drawWavesStyle(ctx, w, h, palette, s.angle, rng); break;
     case 'topographic': drawTopographicStyle(ctx, w, h, palette, s.angle, rng); break;
-    case 'mixed': drawMixedStyle(ctx, w, h, palette, s.angle, rng); break;
     default: drawGradientStyle(ctx, w, h, palette, s.angle, rng);
   }
 }

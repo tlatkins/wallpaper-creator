@@ -112,6 +112,7 @@ body {
   gap: 8px;
 }
 
+.style-options.three-col,
 #toneOptions {
   grid-template-columns: 1fr 1fr 1fr;
 }
