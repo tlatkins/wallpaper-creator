@@ -663,16 +663,19 @@ downloadBtn.addEventListener('click', () => {
   const ctx = renderCanvas.getContext('2d');
   renderWallpaper(ctx, fmt.w, fmt.h, state);
   renderCanvas.toBlob((blob) => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `wallpaper-${state.style}-${state.format}-${state.seed}.png`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    // Safari hands the download off to a separate process; revoking the
-    // blob URL immediately can race ahead of it and abort the download.
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    // Safari's download manager unreliably reads blob: URLs (hands off to a
+    // separate process that can fail to fetch the data), reporting the
+    // correct size but transferring zero bytes. A data: URL sidesteps that.
+    const reader = new FileReader();
+    reader.onload = () => {
+      const a = document.createElement('a');
+      a.href = reader.result;
+      a.download = `wallpaper-${state.style}-${state.format}-${state.seed}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    };
+    reader.readAsDataURL(blob);
   }, 'image/png');
 });
 
