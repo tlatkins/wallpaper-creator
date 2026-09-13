@@ -670,7 +670,9 @@ downloadBtn.addEventListener('click', () => {
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(url);
+    // Safari hands the download off to a separate process; revoking the
+    // blob URL immediately can race ahead of it and abort the download.
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }, 'image/png');
 });
 
